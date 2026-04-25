@@ -98,23 +98,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ======================
 # MAIN
 # ======================
+import asyncio
+
 def main():
     threading.Thread(target=run_flask, daemon=True).start()
 
     app = ApplicationBuilder().token(TG_TOKEN).build()
 
-    # handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logging.info("Cyprus bot running...")
+    logging.info("Cyprus bot starting...")
 
-    # FIX: safer polling for Hugging Face
-    app.run_polling(
-        poll_interval=3,
-        timeout=10,
-        drop_pending_updates=True
-    )
+    async def run():
+        try:
+            await app.initialize()
+            await asyncio.sleep(5)  # wait for HF network warm-up
+            await app.start()
+            await app.updater.start_polling(drop_pending_updates=True)
+
+            # keep alive forever
+            await asyncio.Event().wait()
+
+        except Exception as e:
+            logging.error(f"Bot crashed: {e}")
+
+    asyncio.run(run())
 
 if __name__ == "__main__":
     main()
