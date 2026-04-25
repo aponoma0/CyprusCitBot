@@ -42,7 +42,7 @@ client = InferenceClient(
 )
 
 # ======================
-# SYSTEM PROMPT (CYPRUS EXAM)
+# SYSTEM PROMPT
 # ======================
 SYSTEM_PROMPT = """
 You are a helpful tutor for the Cyprus citizenship exam.
@@ -50,9 +50,8 @@ You are a helpful tutor for the Cyprus citizenship exam.
 RULES:
 - Explain simply and clearly
 - Use English or Russian depending on user language
-- Focus on: history, geography, government, culture of Cyprus
-- If user is confused, simplify explanation
-- Be short and useful, like a teacher
+- Focus on Cyprus history, geography, government, culture
+- Be short and useful
 """
 
 # ======================
@@ -68,24 +67,22 @@ def query_ai(user_text):
             max_tokens=400,
             temperature=0.7
         )
-
         return response.choices[0].message.content
 
     except Exception as e:
         logging.error(f"AI error: {e}")
-        return "Sorry, AI is not available right now. Try again."
+        return "AI temporarily unavailable. Try again."
 
 # ======================
 # START COMMAND
 # ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🇨🇾 Cyprus Citizenship Helper Bot\n\n"
-        "Ask me anything about Cyprus citizenship exam."
+        "🇨🇾 Cyprus Citizenship Helper Bot\n\nAsk me anything about the exam."
     )
 
 # ======================
-# MAIN MESSAGE HANDLER
+# MESSAGE HANDLER
 # ======================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
@@ -96,24 +93,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     response = query_ai(user_text)
-
     await update.message.reply_text(response)
 
 # ======================
-# MAIN APP
+# MAIN
 # ======================
 def main():
-    # start flask in background
     threading.Thread(target=run_flask, daemon=True).start()
 
-    # telegram bot
     app = ApplicationBuilder().token(TG_TOKEN).build()
 
+    # handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     logging.info("Cyprus bot running...")
-    app.run_polling()
+
+    # FIX: safer polling for Hugging Face
+    app.run_polling(
+        poll_interval=3,
+        timeout=10,
+        drop_pending_updates=True
+    )
 
 if __name__ == "__main__":
     main()
