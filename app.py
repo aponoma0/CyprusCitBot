@@ -108,22 +108,18 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logging.info("Cyprus bot starting...")
+    logging.info("Cyprus bot running...")
 
-    async def run():
+    # IMPORTANT FIX: retry-safe polling
+    while True:
         try:
-            await app.initialize()
-            await asyncio.sleep(5)  # wait for HF network warm-up
-            await app.start()
-            await app.updater.start_polling(drop_pending_updates=True)
-
-            # keep alive forever
-            await asyncio.Event().wait()
-
+            app.run_polling(
+                drop_pending_updates=True,
+                timeout=30,
+                poll_interval=5
+            )
         except Exception as e:
-            logging.error(f"Bot crashed: {e}")
-
-    asyncio.run(run())
+            logging.error(f"Restarting bot after error: {e}")
 
 if __name__ == "__main__":
     main()
