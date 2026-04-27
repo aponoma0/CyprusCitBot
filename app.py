@@ -58,6 +58,21 @@ RULES:
 ABOUT_BUTTON = "About"
 ENGLISH_BUTTON = "English"
 SPANISH_BUTTON = "Spanish"
+START_MESSAGE = (
+    "**Привет! Калористе! (Καλώς ορίσατε!)** 🇨🇾✨\n\n"
+    "Я твой персональный тренажер для подготовки к экзамену на **гражданство Кипра**.\n\n"
+    "С 2024 года правила натурализации стали строже, и знание «Современной реальности Кипра» — "
+    "обязательное условие. Я помогу тебе пройти этот путь без стресса!\n\n"
+    "**Что мы будем учить:**\n"
+    "🔹 **История:** От древности до образования республики.\n"
+    "🔹 **Политика:** Как устроена власть и кто принимает решения.\n"
+    "🔹 **География:** Города, горы, реки и климат.\n"
+    "🔹 **Культура:** Традиции, праздники и национальные символы.\n\n"
+    "**Доступные режимы:**\n"
+    "📖 *Обучение* — просматривай вопросы по категориям.\n"
+    "⏱ *Экзамен* — симуляция реального теста (25 вопросов).\n\n"
+    "Готов начать? Жми кнопку ниже! 👇"
+)
 
 TEXT = {
     "en": {
@@ -150,10 +165,11 @@ def query_ai(user_text: str, language: str) -> str:
 # TELEGRAM HANDLERS
 # ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ask for the user's language at the start."""
+    """Send the invitation message, then ask for the user's language."""
     if update.message is None:
         return
 
+    await update.message.reply_text(START_MESSAGE)
     await update.message.reply_text(TEXT["en"]["choose_language"], reply_markup=build_language_keyboard())
 
 
