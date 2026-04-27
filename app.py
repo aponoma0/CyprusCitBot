@@ -1,5 +1,5 @@
-"""This file runs a small Telegram study bot with an About button.
-Edit it when you change bot messages, commands, or button behavior.
+"""This file runs a small Telegram study bot with language choice and an About button.
+Edit it when you change bot messages, language flow, commands, or button behavior.
 Copy it as a starting point for another simple Telegram bot."""
 
 import asyncio
@@ -50,48 +50,91 @@ You are a helpful tutor for the Cyprus citizenship exam.
 
 RULES:
 - Explain simply and clearly
-- Use English or Russian depending on user language
+- Use the user's chosen language
 - Focus on Cyprus history, geography, government, culture
 - Be short and useful
 """
 
 ABOUT_BUTTON = "About"
+ENGLISH_BUTTON = "English"
+SPANISH_BUTTON = "Spanish"
+
+TEXT = {
+    "en": {
+        "about_button": "About",
+        "choose_language": "Please choose your language.",
+        "welcome": (
+            "Cyprus Citizenship Helper Bot\n\n"
+            "I can help you prepare for the naturalization exam.\n"
+            "Ask me about history, geography, or the political system.\n\n"
+            "Tap About to learn what this bot does."
+        ),
+        "about": (
+            "About this bot\n\n"
+            "This bot helps you study for the Cyprus citizenship exam.\n"
+            "It can explain Cyprus history, geography, government, and culture in simple words.\n"
+            "You can write in English."
+        ),
+        "language_saved": "Language saved: English.",
+        "language_needed": "Please choose a language first.",
+        "ai_error": "AI is temporarily unavailable. Please try again in a moment.",
+    },
+    "es": {
+        "about_button": "Acerca de",
+        "choose_language": "Por favor, elige tu idioma.",
+        "welcome": (
+            "Bot de Ayuda para la Ciudadania de Chipre\n\n"
+            "Puedo ayudarte a prepararte para el examen de naturalizacion.\n"
+            "Preguntame sobre historia, geografia o el sistema politico.\n\n"
+            "Toca Acerca de para saber que hace este bot."
+        ),
+        "about": (
+            "Acerca de este bot\n\n"
+            "Este bot te ayuda a estudiar para el examen de ciudadania de Chipre.\n"
+            "Puede explicar la historia, geografia, gobierno y cultura de Chipre con palabras simples.\n"
+            "Puedes escribir en espanol."
+        ),
+        "language_saved": "Idioma guardado: Espanol.",
+        "language_needed": "Por favor, elige un idioma primero.",
+        "ai_error": "La IA no esta disponible ahora. Intentalo de nuevo en un momento.",
+    },
+}
+
+user_languages: dict[int, str] = {}
 
 
-def build_main_keyboard() -> ReplyKeyboardMarkup:
+def build_main_keyboard(language: str) -> ReplyKeyboardMarkup:
     """Create the simple keyboard shown under the chat."""
-    return ReplyKeyboardMarkup([[ABOUT_BUTTON]], resize_keyboard=True)
+    return ReplyKeyboardMarkup([[get_text(language, "about_button")]], resize_keyboard=True)
 
 
-def get_start_text() -> str:
-    """Return the welcome text shown after /start."""
-    return (
-        "Cyprus Citizenship Helper Bot\n\n"
-        "I can help you prepare for the naturalization exam.\n"
-        "Ask me about history, geography, or the political system.\n\n"
-        "Tap About to learn what this bot does."
-    )
+def build_language_keyboard() -> ReplyKeyboardMarkup:
+    """Create the keyboard for the first language choice."""
+    return ReplyKeyboardMarkup([[ENGLISH_BUTTON, SPANISH_BUTTON]], resize_keyboard=True, one_time_keyboard=True)
 
 
-def get_about_text() -> str:
-    """Return the About message for the About button."""
-    return (
-        "About this bot\n\n"
-        "This bot helps you study for the Cyprus citizenship exam.\n"
-        "It can explain Cyprus history, geography, government, and culture in simple words.\n"
-        "You can write in English or Russian."
-    )
+def get_user_language(update: Update) -> str | None:
+    """Return the saved language for the current user."""
+    if update.effective_user is None:
+        return None
+
+    return user_languages.get(update.effective_user.id)
+
+
+def get_text(language: str, key: str) -> str:
+    """Return one translated message string."""
+    return TEXT[language][key]
 
 
 # ======================
 # AI LOGIC
 # ======================
-def query_ai(user_text: str) -> str:
+def query_ai(user_text: str, language: str) -> str:
     """Send the user question to the AI model and return the answer."""
     try:
         response = client.chat_completion(
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": f"{SYSTEM_PROMPT}\nAnswer only in {'Spanish' if language == 'es' else 'English'}."},
                 {"role": "user", "content": user_text},
             ],
             max_tokens=400,
@@ -100,18 +143,18 @@ def query_ai(user_text: str) -> str:
         return response.choices[0].message.content
     except Exception as error:
         logger.error("AI error: %s", error)
-        return "AI is temporarily unavailable. Please try again in a moment."
+        return get_text(language, "ai_error")
 
 
 # ======================
 # TELEGRAM HANDLERS
 # ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send the welcome message and show the main keyboard."""
+    """Ask for the user's language at the start."""
     if update.message is None:
         return
 
-    await update.message.reply_text(get_start_text(), reply_markup=build_main_keyboard())
+    await update.message.reply_text(TEXT["en"]["choose_language"], reply_markup=build_language_keyboard())
 
 
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -119,11 +162,26 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message is None:
         return
 
-    await update.message.reply_text(get_about_text(), reply_markup=build_main_keyboard())
+    language = get_user_language(update)
+    if language is None:
+        await update.message.reply_text(TEXT["en"]["choose_language"], reply_markup=build_language_keyboard())
+        return
+
+    await update.message.reply_text(get_text(language, "about"), reply_markup=build_main_keyboard(language))
+
+
+async def save_language_choice(update: Update, language: str):
+    """Save the chosen language and send the welcome text."""
+    if update.message is None or update.effective_user is None:
+        return
+
+    user_languages[update.effective_user.id] = language
+    await update.message.reply_text(get_text(language, "language_saved"), reply_markup=build_main_keyboard(language))
+    await update.message.reply_text(get_text(language, "welcome"), reply_markup=build_main_keyboard(language))
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle normal messages and the About button."""
+    """Handle language choice, About button, and AI messages."""
     if update.message is None:
         return
 
@@ -131,14 +189,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user_text:
         return
 
-    if user_text.strip().lower() == ABOUT_BUTTON.lower():
+    clean_text = user_text.strip()
+
+    if clean_text == ENGLISH_BUTTON:
+        await save_language_choice(update, "en")
+        return
+
+    if clean_text == SPANISH_BUTTON:
+        await save_language_choice(update, "es")
+        return
+
+    language = get_user_language(update)
+    if language is None:
+        await update.message.reply_text(TEXT["en"]["choose_language"], reply_markup=build_language_keyboard())
+        return
+
+    if clean_text.lower() == get_text(language, "about_button").lower() or clean_text.lower() == ABOUT_BUTTON.lower():
         await about(update, context)
         return
 
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
-    response = query_ai(user_text)
-    await update.message.reply_text(response, reply_markup=build_main_keyboard())
+    response = query_ai(user_text, language)
+    await update.message.reply_text(response, reply_markup=build_main_keyboard(language))
 
 
 # ======================
