@@ -57,7 +57,7 @@ RULES:
 
 ABOUT_BUTTON = "About"
 ENGLISH_BUTTON = "English"
-SPANISH_BUTTON = "Spanish"
+RUSSIAN_BUTTON = "Russian"
 START_MESSAGE = (
     "**Привет! Калористе! (Καλώς ορίσατε!)** 🇨🇾✨\n\n"
     "Я твой персональный тренажер для подготовки к экзамену на **гражданство Кипра**.\n\n"
@@ -94,24 +94,24 @@ TEXT = {
         "language_needed": "Please choose a language first.",
         "ai_error": "AI is temporarily unavailable. Please try again in a moment.",
     },
-    "es": {
-        "about_button": "Acerca de",
-        "choose_language": "Por favor, elige tu idioma.",
+    "ru": {
+        "about_button": "О боте",
+        "choose_language": "Пожалуйста, выбери язык.",
         "welcome": (
-            "Bot de Ayuda para la Ciudadania de Chipre\n\n"
-            "Puedo ayudarte a prepararte para el examen de naturalizacion.\n"
-            "Preguntame sobre historia, geografia o el sistema politico.\n\n"
-            "Toca Acerca de para saber que hace este bot."
+            "Бот-помощник для гражданства Кипра\n\n"
+            "Я могу помочь тебе подготовиться к экзамену на натурализацию.\n"
+            "Спроси меня об истории, географии или политической системе.\n\n"
+            "Нажми О боте, чтобы узнать, что делает этот бот."
         ),
         "about": (
-            "Acerca de este bot\n\n"
-            "Este bot te ayuda a estudiar para el examen de ciudadania de Chipre.\n"
-            "Puede explicar la historia, geografia, gobierno y cultura de Chipre con palabras simples.\n"
-            "Puedes escribir en espanol."
+            "О боте\n\n"
+            "Этот бот помогает готовиться к экзамену на гражданство Кипра.\n"
+            "Он может простыми словами объяснить историю, географию, государственное устройство и культуру Кипра.\n"
+            "Ты можешь писать по-русски."
         ),
-        "language_saved": "Idioma guardado: Espanol.",
-        "language_needed": "Por favor, elige un idioma primero.",
-        "ai_error": "La IA no esta disponible ahora. Intentalo de nuevo en un momento.",
+        "language_saved": "Язык сохранен: Русский.",
+        "language_needed": "Пожалуйста, сначала выбери язык.",
+        "ai_error": "ИИ сейчас недоступен. Попробуй еще раз чуть позже.",
     },
 }
 
@@ -125,7 +125,7 @@ def build_main_keyboard(language: str) -> ReplyKeyboardMarkup:
 
 def build_language_keyboard() -> ReplyKeyboardMarkup:
     """Create the keyboard for the first language choice."""
-    return ReplyKeyboardMarkup([[ENGLISH_BUTTON, SPANISH_BUTTON]], resize_keyboard=True, one_time_keyboard=True)
+    return ReplyKeyboardMarkup([[ENGLISH_BUTTON, RUSSIAN_BUTTON]], resize_keyboard=True, one_time_keyboard=True)
 
 
 def get_user_language(update: Update) -> str | None:
@@ -149,7 +149,7 @@ def query_ai(user_text: str, language: str) -> str:
     try:
         response = client.chat_completion(
             messages=[
-                {"role": "system", "content": f"{SYSTEM_PROMPT}\nAnswer only in {'Spanish' if language == 'es' else 'English'}."},
+                {"role": "system", "content": f"{SYSTEM_PROMPT}\nAnswer only in {'Russian' if language == 'ru' else 'English'}."},
                 {"role": "user", "content": user_text},
             ],
             max_tokens=400,
@@ -211,8 +211,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await save_language_choice(update, "en")
         return
 
-    if clean_text == SPANISH_BUTTON:
-        await save_language_choice(update, "es")
+    if clean_text == RUSSIAN_BUTTON:
+        await save_language_choice(update, "ru")
         return
 
     language = get_user_language(update)
